@@ -1,0 +1,10 @@
+# 确保全局屏蔽 .DS_Store 文件
+**/.DS_Store
+# 确保全局屏蔽 __pycache__ 目录
+**/__pycache__/
+# 确保全局屏蔽 .pyc 文件
+**/*.pyc
+.ipynb_checkpoints
+.vscode/
+**/*.xlsx
+**/*.zip

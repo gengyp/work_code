@@ -1,0 +1,19 @@
+binning:
+  continuous:
+    method: cart
+    min_leaf_ratio: 0.15
+  categorical:
+    method: merge
+    max_bins: 6
+    evaluation_type: 2
+    decreasing_threshold: 0.005
+
+feature_selection:
+  corr_threshold: 0.7
+  iv_threshold: 0.02
+  n_features: 15
+
+model:
+  scoring: roc_auc
+  cv: 3
+  class_weight: balanced
