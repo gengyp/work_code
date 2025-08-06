@@ -194,8 +194,13 @@ class Woe_dataframe(CommonTool):
         return transform
 
     def trans_func(self, woe_dict, series):
+        # 从传入的 WOE 字典中获取当前列对应的 WOE 序列
         woe_series = woe_dict[series.name]
+        # 从原始数据集中获取当前列的数据
         ori_data = self.df[series.name]
+        # 根据原始数据的值从 WOE 序列中选取对应的 WOE 值，得到转换后的序列
         transformed = woe_series.loc[ori_data]
+        # 将转换后序列的索引设置为原始数据的索引，保证索引一致
         transformed.index = ori_data.index
+        # 返回转换后的序列
         return transformed
