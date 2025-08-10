@@ -12,11 +12,39 @@ from concurrent.futures import ProcessPoolExecutor
 
 class Calculate_bin(object):
     """
-    Bin计算的工厂类
+    Bin计算的工厂类，提供不同类型变量的分箱方法
     """
     @staticmethod
     def cat_bin_solution_1(s1, y, binlimitnum, evaluationType, decreasingvalue):
+        """
+        分类型变量的归并方法
+
+        功能：对分类型变量进行归并，穷举多种分类归并策略，最终选择最优的归并方法
+
+        输入：
+        - s1: 分类型变量的Series
+        - y: 目标变量的Series
+        - binlimitnum: 归并后最大区间数
+        - evaluationType: 评估策略 (1: iv最大化策略, 2: 综合最优策略)
+        - decreasingvalue: 综合最优策略下可容忍的iv降低程度
+
+        输出：
+        - dict: 分箱映射字典，键为原始值(元组)，值为映射后的值
+        """
         def Evaluation(df, evaluationType, bininfodict, decreasingvalue, data_type):
+            """
+            评估不同分箱方案并选择最优方案
+
+            输入：
+            - df: 包含分箱评估指标的DataFrame
+            - evaluationType: 评估策略
+            - bininfodict: 分箱信息字典
+            - decreasingvalue: 可容忍的iv降低程度
+            - data_type: 数据类型 ('num' 或 'cat')
+
+            输出：
+            - tuple: (最优分箱变量名, 最优分箱信息)
+            """
             df['iv_plus_gain'] = numpy.round(numpy.where(
                 df['iv'] >= 99, 0, df['iv'])+df['gain'], 4)
             df.sort_values(by=['woepattern', 'intervalnums'], inplace=True)
@@ -43,8 +71,17 @@ class Calculate_bin(object):
                     return varname, numpy.array(bininfodict[binsno])
 
         def binresult(series_discrete, y, data_type):
-            # 输入：离散化序列，标签，数据类型
-            # print('计算变量的 chi2pvalue、infogain、iv...')
+            """
+            计算分箱结果的评估指标
+
+            输入：
+            - series_discrete: 离散化后的变量Series
+            - y: 目标变量Series
+            - data_type: 数据类型 ('num' 或 'cat')
+
+            输出：
+            - pandas.Series: 包含chi2pvalue、gain、iv、woepattern等评估指标
+            """
             st_array = EdaMethod(series_discrete).UnFeatureSelection(y)
             woe_array, woe_info = Discretizated(
                 series_discrete).WoeTransform(y)
@@ -58,10 +95,16 @@ class Calculate_bin(object):
                                      index=['chi2pvalue', 'gain', 'iv', 'woepattern', 'intervalnums'])
 
         def binprocess(s1, binlimitnum):
-            '''
-            输入：变量的Series
-            输出：binlimitnum 种分箱结果，以及六种分箱数据框
-            '''
+            """
+            生成多种分箱方案
+
+            输入：
+            - s1: 原始变量Series
+            - binlimitnum: 最大分箱数
+
+            输出：
+            - tuple: (包含多种分箱方案的DataFrame, 分箱信息字典)
+            """
             varname = s1.name
             d1 = pandas.DataFrame(s1, columns=[varname])
             st = s1.value_counts()  # 指标对应值的个数
@@ -120,10 +163,29 @@ class Calculate_bin(object):
 
     @staticmethod
     def num_bin_cart(s1, y, min_leaf_ratio):
+        """
+        使用CART决策树进行数值型变量的分箱
+
+        功能：通过CART决策树算法找到最优的数值型变量分割点
+
+        输入：
+        - s1: 数值型变量Series
+        - y: 目标变量Series
+        - min_leaf_ratio: 叶子节点最小占比
+
+        输出：
+        - list: 排序后的最优分割点列表
+        """
         def calc_var_median(sample_set):
-            '''
-            计算相邻变量的中位数，以便进行决策树二元切分
-            '''
+            """
+            计算相邻变量的中位数，用于决策树二元切分
+
+            输入：
+            - sample_set: 包含变量和目标值的DataFrame
+
+            输出：
+            - list: 相邻变量值的中位数列表
+            """
             var_list = list(numpy.unique(sample_set.iloc[:, 0]))
             var_list.sort()
             var_median_list = []
@@ -133,10 +195,16 @@ class Calculate_bin(object):
             return var_median_list
 
         def choose_best_split(sample_set, min_samples_leaf):
-            '''
-            使用CART分类决策树选择最好的样本切分点
-            返回切分点
-            '''
+            """
+            使用CART分类决策树选择最优样本切分点
+
+            输入：
+            - sample_set: 包含变量和目标值的DataFrame
+            - min_samples_leaf: 叶子节点最小样本数
+
+            输出：
+            - float/str: 最优分割点，若无法分割则返回'null'
+            """
             var_median_list = calc_var_median(sample_set)
 
             sample_cnt = sample_set.shape[0]
@@ -179,9 +247,17 @@ class Calculate_bin(object):
             return bestSplit_point
 
         def bining_data_split(sample_set, min_samples_leaf, split_list):
-            '''
-            划分数据找到最优分割点list
-            '''
+            """
+            递归划分数据，找到最优分割点列表
+
+            输入：
+            - sample_set: 待分割的数据集
+            - min_samples_leaf: 叶子节点最小样本数
+            - split_list: 用于存储分割点的列表
+
+            输出：
+            - None (分割点会添加到split_list中)
+            """
             split = choose_best_split(sample_set, min_samples_leaf)
             if split == 'null':
                 return
@@ -201,9 +277,17 @@ class Calculate_bin(object):
                                   min_samples_leaf, split_list)
 
         def get_bestsplit_list(s1, y, min_samples_leaf):
-            '''
-            根据分箱得到最优分割点list
-            '''
+            """
+            获取最优分割点列表
+
+            输入：
+            - s1: 数值型变量Series
+            - y: 目标变量Series
+            - min_samples_leaf: 叶子节点最小样本数
+
+            输出：
+            - list: 排序后的最优分割点列表
+            """
             # 计算最小样本阈值（终止条件）
             split_list = []
             bining_data_split(pandas.concat(
@@ -243,6 +327,18 @@ class Bin(CommonTool):
     """
 
     def __init__(self, df, target, ignore_columns=None, cat_columns=None):
+        """
+        初始化Bin类实例
+
+        输入：
+        - df: 需要计算的数据集
+        - target: 标识列(Series)
+        - ignore_columns: 需要忽略的列
+        - cat_columns: 离散变量列名列表
+
+        输出：
+        - None (初始化类实例)
+        """
         super(Bin, self).__init__(df, target, ignore_columns)
         self.cat_columns = cat_columns
 
@@ -251,7 +347,15 @@ class Bin(CommonTool):
             self.get_num_columns()
 
     def get_num_columns(self):
-        '''分离连续、离散变量'''
+        """
+        分离连续变量和离散变量
+
+        输入：
+        - None (使用类实例的df和cat_columns属性)
+
+        输出：
+        - None (设置类实例的num_columns属性)
+        """
         num_cols = []
         for i in self.df.columns:
             if i not in self.cat_columns:
@@ -260,15 +364,18 @@ class Bin(CommonTool):
 
     def cat_bin_solution(self, columns, evaluationType=2, decreasingvalue=0.005, binlimitnum=6):
         """
-        分类型最优算法1
-        用于分类型变量的归并，穷举多种分类归并策略，最终采纳最合适的归并方法用来归并
+        分类型变量的最优分箱
 
-        Parameters
-        ----------
-        columns: 需要计算的分类型列, 需要为list, 如['column1', 'column2']
-        binlimitnum(默认6): 归并后最大区间数, 一般取6
-        evaluationType(默认2): 1表示iv最大化策略，2表示综合最优策略
-        decreasingvalue(默认为0.005): 在evaluationType=2的时候, 表示采用综合最优策略能否容忍的iv降低程度
+        功能：对分类型变量进行归并，穷举多种分类归并策略，最终采纳最合适的归并方法
+
+        输入：
+        - columns: 需要计算的分类型列，为list
+        - binlimitnum(默认6): 归并后最大区间数
+        - evaluationType(默认2): 1表示iv最大化策略，2表示综合最优策略
+        - decreasingvalue(默认0.005): 综合最优策略下可容忍的iv降低程度
+
+        输出：
+        - None (更新类实例的bin_info属性)
         """
         # 如果未传入 columns 参数，则使用类实例中的 cat_columns 作为目标列
         final_columns = columns or self.cat_columns
@@ -297,12 +404,16 @@ class Bin(CommonTool):
 
     def num_bin_cart(self, columns=None, min_leaf_ratio=0.15):
         """
-        最优分箱
+        数值型变量的最优分箱（使用CART决策树）
 
-        Parameters
-        ----------
-        columns(默认为'ALL'):需要计算的列,需要为list,如['column1','column2']
-        min_leaf_ratio(默认为0.1):叶子节点最小占比
+        功能：对数值型变量使用CART决策树进行分箱
+
+        输入：
+        - columns: 需要计算的列，为list
+        - min_leaf_ratio(默认0.15): 叶子节点最小占比
+
+        输出：
+        - None (更新类实例的bin_info属性)
         """
         dt_num = {}
         self.num_columns = columns or self.num_columns
@@ -340,7 +451,17 @@ class Bin(CommonTool):
         self.__pro_null_bin()
 
     def __pro_null_bin(self):
-        # 处理bin 为空的连续变量
+        """
+        处理空分箱的连续变量
+
+        功能：将无法分箱的连续变量转为离散变量处理
+
+        输入：
+        - None (使用类实例的bin_info、num_columns和cat_columns属性)
+
+        输出：
+        - None (更新类实例的bin_info、num_columns和cat_columns属性)
+        """
         temp = []
         for k, v in self.bin_info.items():
             if v == []:
@@ -351,7 +472,17 @@ class Bin(CommonTool):
             self.bin_info.pop(i)
 
     def artificial_update_bin(self, dt):
-        # 人工分箱，更新bin
+        """
+        人工更新分箱信息
+
+        功能：允许用户手动更新分箱信息，并调整变量类型
+
+        输入：
+        - dt: 包含分箱信息的字典
+
+        输出：
+        - None (更新类实例的bin_info、num_columns和cat_columns属性)
+        """
         for k, v in dt.items():
             if isinstance(v, list):  # 连续变量
                 if k in self.cat_columns:
@@ -367,11 +498,15 @@ class Bin(CommonTool):
 
     def transform(self, bin_info=None):
         """
-        Parameters
-        ----------
-        bin_info: bin信息的dict,默认为此实例做完bin后的bin_info
+        根据分箱信息转换数据
 
-        comments: 分箱变量信息 要与 数据框变量个数 相等
+        功能：使用分箱信息将原始数据转换为分箱后的数据
+
+        输入：
+        - bin_info(默认None): 分箱信息字典，默认为类实例的bin_info
+
+        输出：
+        - pandas.DataFrame: 分箱转换后的数据集
         """
         bin_info = bin_info or self.bin_info
 
@@ -385,7 +520,7 @@ class Bin(CommonTool):
                 print('bin_info exist error!~~')
 
         # 根据 连续/离散 分离 bin_info
-        num_bin_info, cat_bin_info = {}, {}
+        num_bin_info, cat_bin_info = {}, {} 
         for i in num_columns:
             num_bin_info[i] = bin_info[i]
         for i in cat_columns:
@@ -411,9 +546,33 @@ class Bin(CommonTool):
         return dis_df
 
     def num_trans_func(self, series, bins):
+        """
+        数值型变量的转换函数
+
+        功能：将数值型变量根据分箱信息转换为对应的分箱索引
+
+        输入：
+        - series: 数值型变量Series
+        - bins: 分箱边界列表
+
+        输出：
+        - pandas.Series: 转换后的分箱索引Series
+        """
         return numpy.digitize(series, bins, right=True)
 
     def cat_trans_func(self, series, bins):
+        """
+        分类型变量的转换函数
+
+        功能：将分类型变量根据分箱信息转换为对应的映射值
+
+        输入：
+        - series: 分类型变量Series
+        - bins: 分箱映射字典
+
+        输出：
+        - pandas.Series: 转换后的变量Series
+        """
         bk = list(bins.keys())
         if 'others' in bk:
             bk.remove('others')
