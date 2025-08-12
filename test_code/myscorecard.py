@@ -176,8 +176,6 @@ class dataProcess():
             woe_dict[category] = woe
         return woe_dict
 
-
-
 class modelTrain():
     '''
     模型训练类

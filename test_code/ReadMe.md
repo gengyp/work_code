@@ -27,13 +27,13 @@
 
 4. **离散变量编码**：
     - 基于好坏比列倒序的数值编码
-    - 生成编码字典，便于逆转换
+    - 生成编码字典，便于转换
 
-### 4. 输入输出
+### 3. 输入输出
 - **输入**：原始数据集（DataFrame）
-- **输出**：单变量分析报告、处理后数据集
+- **输出**：单变量分析报告、离散编码后数据集
 
-## 三、特征工程
+## 二、特征工程
 ### 1. 功能概述
 特征工程是评分卡建模的核心步骤，包括特征分箱、WOE编码、IV值计算和特征筛选等。
 
@@ -41,25 +41,24 @@
 #### 2.1 特征分箱
 - **分箱方法**：
     - 最终选择：最优分箱（CART决策树分箱）最小叶节点占比5%
+    - 最有分箱实现方法：模型和手工
 
 #### 2.2 WOE编码与IV计算
-- **WOE编码**：将变量值转换为证据权重值（`weightOfEvidence.py`）
-- **IV计算**：计算每个变量的信息价值，评估变量预测能力（`weightOfEvidence.py`）
 
 #### 2.3 特征筛选
-- **单变量筛选**：基于IV值筛选（`uniAnalysis.py`）
-- **多变量筛选**：基于相关性分析和VIF（多重共线性）检测（`multiAnalysis.py`、`model.py`）
-- **递归特征消除**：使用RFE和RFECV方法（`model.py`）
+- **单变量筛选**：基于IV值筛选
+- **多变量筛选**：基于相关性分析和VIF（多重共线性）检测
+- **递归特征消除**：使用RFE和RFECV方法（待优化）
 
 #### 2.4 相关性分析
-- **相关系数计算**：基于Pearson相关系数（`multiAnalysis.py`）
-- **强相关变量处理**：基于IV值选择强相关变量组中的最优变量（`multiAnalysis.py`）
+- **相关系数计算**：基于Pearson相关系数
+- **强相关变量处理**：基于IV值选择强相关变量组中的最优变量
 
 ### 4. 输入输出
 - **输入**：处理后数据集
 - **输出**：WOE编码后的数据集、筛选后的特征列表
 
-## 四、模型训练
+## 三、模型训练
 ### 1. 功能概述
 实现评分卡模型的训练、参数调优和评估。
 
@@ -86,22 +85,6 @@
 ### 4. 输入输出
 - **输入**：WOE编码后的训练集
 - **输出**：训练好的模型、模型评估指标
-
-### 5. 使用示例
-```python
-from model import Models
-
-# 模型训练
-model = Models(corr_reduced_data, df_processed['flag'])
-# 参数调优与训练
-lr_model = model.LR(cv_scoring='roc_auc', cv=5)
-
-# 模型评估
-y_pred = lr_model.predict(test_data)
-accuracy = accuracy_score(test_data['flag'], y_pred)
-roc_auc = roc_auc_score(test_data['flag'], lr_model.predict_proba(test_data)[:, 1])
-print(f'Accuracy: {accuracy}, ROC-AUC: {roc_auc}')
-```
 
 ## 五、模型测试
 ### 1. 功能概述
@@ -159,42 +142,5 @@ joblib.dump(binning_rules, 'binning_rules.pkl')
 # 生成Excel报告
 generate_excel_report(lr_model, binning_rules, 'scorecard_report.xlsx')
 ```
-
-## 七、项目结构
-```
-test_code/
-├── ReadMe.md           # 项目文档
-├── mian.py             # 主程序入口
-├── myscorecard.py      # 评分卡建模类
-├── train_HR.csv        # 示例数据
-└── model_code/         # 核心模块
-    ├── binTransform.py        # 特征分箱转换
-    ├── chi2square_bin.py      # 卡方分箱
-    ├── commonTools.py         # 通用工具
-    ├── dataProcess.py         # 数据处理
-    ├── model.py               # 模型训练与评估
-    ├── multiAnalysis.py       # 多变量分析
-    ├── sampleSeg.py           # 样本分割与抽样
-    ├── uniAnalysis.py         # 单变量分析
-    └── weightOfEvidence.py    # WOE与IV计算
-```
-
-## 八、依赖包
-- pandas
-- numpy
-- scikit-learn
-- scipy
-- matplotlib
-- seaborn
-- joblib
-
-## 九、使用流程
-1. 数据加载与预处理
-2. 单变量分析与特征筛选
-3. 样本分割与平衡
-4. 特征分箱与WOE编码
-5. 模型训练与调优
-6. 模型评估与测试
-7. 模型导出与部署
 
 希望本文档能帮助您快速理解和使用本评分卡建模工具。如有任何问题或建议，请随时联系。
